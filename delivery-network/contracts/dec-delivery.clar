@@ -52,3 +52,18 @@
     (ok (map-set packages { package-id: package-id } package-data))
   )
 )
+
+;; Register as a courier
+(define-public (register-courier (name (string-ascii 50)))
+  (let
+    (
+      (courier-data {
+        name: name,
+        rating: u0,
+        total-deliveries: u0
+      })
+    )
+    (asserts! (is-none (map-get? couriers { courier-id: tx-sender })) err-already-exists)
+    (ok (map-set couriers { courier-id: tx-sender } courier-data))
+  )
+)
