@@ -122,3 +122,19 @@
     )
   )
 )
+
+;; Rate a courier
+(define-public (rate-courier (courier principal) (rating uint))
+  (let
+    (
+      (courier-data (unwrap! (map-get? couriers { courier-id: courier }) err-not-found))
+    )
+    (asserts! (and (>= rating u1) (<= rating u5)) err-invalid-rating)
+    (ok (map-set couriers { courier-id: courier }
+      (merge courier-data {
+        rating: (/ (+ (* (get rating courier-data) (get total-deliveries courier-data)) rating)
+                   (+ (get total-deliveries courier-data) u1))
+      })
+    ))
+  )
+)
