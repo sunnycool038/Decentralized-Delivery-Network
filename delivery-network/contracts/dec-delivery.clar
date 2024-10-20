@@ -32,6 +32,16 @@
 ;; Define non-fungible token for packages
 (define-non-fungible-token package uint)
 
+;; Get package details
+(define-read-only (get-package-details (package-id uint))
+  (map-get? packages { package-id: package-id })
+)
+
+;; Get courier details
+(define-read-only (get-courier-details (courier-id principal))
+  (map-get? couriers { courier-id: courier-id })
+)
+
 
 ;; Create a new package
 (define-public (create-package (package-id uint) (recipient principal) (price uint) (pickup-location (string-ascii 50)) (delivery-location (string-ascii 50)))
@@ -67,3 +77,4 @@
     (ok (map-set couriers { courier-id: tx-sender } courier-data))
   )
 )
+
