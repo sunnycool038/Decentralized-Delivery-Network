@@ -5,6 +5,7 @@
 (define-constant err-owner-only (err u100))
 (define-constant err-not-found (err u101))
 (define-constant err-already-exists (err u102))
+(define-constant err-invalid-rating (err u103))
 
 ;; Define data maps
 (define-map packages 
@@ -30,7 +31,7 @@
 )
 
 ;; Define non-fungible token for packages
-(define-non-fungible-token package uint)
+(define-non-fungible-token package-nft uint)
 
 ;; Get package details
 (define-read-only (get-package-details (package-id uint))
@@ -58,7 +59,7 @@
       })
     )
     (asserts! (is-none (map-get? packages { package-id: package-id })) err-already-exists)
-    (try! (nft-mint? package package-id tx-sender))
+    (try! (nft-mint? package-nft package-id tx-sender))
     (ok (map-set packages { package-id: package-id } package-data))
   )
 )
@@ -78,3 +79,19 @@
   )
 )
 
+;; Accept a package for delivery
+(define-public (accept-package (package-id uint))
+  (let
+    (
+      (package-data (unwrap! (map-get? packages { package-id: package-id }) err-not-found))
+    )
+    (asserts! (is-some (map-get? couriers { courier-id: tx-sender })) err-not-found)
+    (asserts! (is-none (get courier package-data)) err-already-exists)
+    (ok (map-set packages { package-id: package-id }
+      (merge package-data { 
+        courier: (some tx-sender),
+        status: "in-transit"
+      })
+    ))
+  )
+)
