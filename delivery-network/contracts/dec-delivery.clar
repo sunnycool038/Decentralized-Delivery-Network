@@ -31,3 +31,24 @@
 
 ;; Define non-fungible token for packages
 (define-non-fungible-token package uint)
+
+
+;; Create a new package
+(define-public (create-package (package-id uint) (recipient principal) (price uint) (pickup-location (string-ascii 50)) (delivery-location (string-ascii 50)))
+  (let
+    (
+      (package-data {
+        sender: tx-sender,
+        recipient: recipient,
+        courier: none,
+        status: "created",
+        price: price,
+        pickup-location: pickup-location,
+        delivery-location: delivery-location
+      })
+    )
+    (asserts! (is-none (map-get? packages { package-id: package-id })) err-already-exists)
+    (try! (nft-mint? package package-id tx-sender))
+    (ok (map-set packages { package-id: package-id } package-data))
+  )
+)
