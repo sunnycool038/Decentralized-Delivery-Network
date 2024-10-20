@@ -95,3 +95,30 @@
     ))
   )
 )
+
+;; Complete a delivery
+(define-public (complete-delivery (package-id uint))
+  (let
+    (
+      (package-data (unwrap! (map-get? packages { package-id: package-id }) err-not-found))
+      (courier (unwrap! (get courier package-data) err-not-found))
+    )
+    (asserts! (is-eq tx-sender courier) err-owner-only)
+    (try! (stx-transfer? (get price package-data) (get sender package-data) courier))
+    (map-set packages { package-id: package-id }
+      (merge package-data { 
+        status: "delivered"
+      })
+    )
+    (let
+      (
+        (courier-data (unwrap! (map-get? couriers { courier-id: courier }) err-not-found))
+      )
+      (ok (map-set couriers { courier-id: courier }
+        (merge courier-data {
+          total-deliveries: (+ (get total-deliveries courier-data) u1)
+        })
+      ))
+    )
+  )
+)
