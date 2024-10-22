@@ -358,3 +358,40 @@ Clarinet.test({
         assertEquals(block.receipts[0].result.expectOk(), true);
     },
 });
+
+// Negative test cases
+Clarinet.test({
+    name: "Ensure that unregistered couriers cannot accept packages",
+    async fn(chain: Chain, accounts: Map<string, Account>)
+    {
+        const sender = accounts.get("wallet_1")!;
+        const recipient = accounts.get("wallet_2")!;
+        const unregisteredCourier = accounts.get("wallet_3")!;
+
+        let block = chain.mineBlock([
+            Tx.contractCall(
+                CONTRACT_NAME,
+                "create-package",
+                [
+                    types.uint(1),
+                    types.principal(recipient.address),
+                    types.uint(1000),
+                    types.ascii("123 Pickup St"),
+                    types.ascii("456 Delivery Ave")
+                ],
+                sender.address
+            )
+        ]);
+
+        block = chain.mineBlock([
+            Tx.contractCall(
+                CONTRACT_NAME,
+                "accept-package",
+                [types.uint(1)],
+                unregisteredCourier.address
+            )
+        ]);
+
+        assertEquals(block.receipts[0].result.expectErr(), types.uint(101)); // err-not-found
+    },
+});
