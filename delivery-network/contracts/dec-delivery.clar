@@ -255,3 +255,25 @@
 (define-read-only (get-dispute-details (package-id uint))
   (map-get? disputes { package-id: package-id })
 )
+
+;; Update courier stats after delivery
+(define-public (update-courier-stats (courier-id principal) (earnings uint))
+  (let
+    (
+      (stats (default-to {
+        completed-deliveries: u0,
+        cancelled-deliveries: u0,
+        disputed-deliveries: u0,
+        total-earnings: u0
+      } (map-get? courier-stats { courier-id: courier-id })))
+    )
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (ok (map-set courier-stats { courier-id: courier-id }
+      (merge stats {
+        completed-deliveries: (+ (get completed-deliveries stats) u1),
+        total-earnings: (+ (get total-earnings stats) earnings)
+      })
+    ))
+  )
+)
+
