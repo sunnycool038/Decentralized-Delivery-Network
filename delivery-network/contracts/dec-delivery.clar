@@ -277,3 +277,20 @@
   )
 )
 
+
+;; Resolve dispute
+(define-public (resolve-dispute (package-id uint) (resolution (string-ascii 20)))
+  (let
+    (
+      (dispute-data (unwrap! (map-get? disputes { package-id: package-id }) err-not-found))
+    )
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (ok (map-set disputes { package-id: package-id }
+      (merge dispute-data {
+        status: resolution
+      })
+    ))
+  )
+)
+
+
