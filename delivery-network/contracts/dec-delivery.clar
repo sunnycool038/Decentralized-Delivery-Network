@@ -6,6 +6,42 @@
 (define-constant err-not-found (err u101))
 (define-constant err-already-exists (err u102))
 (define-constant err-invalid-rating (err u103))
+(define-constant err-invalid-status (err u104))
+(define-constant err-invalid-cancellation (err u105))
+(define-constant err-unauthorized (err u106))
+(define-constant err-invalid-dispute (err u107))
+
+;; Define additional maps
+(define-map disputes
+  { package-id: uint }
+  {
+    complainant: principal,
+    reason: (string-ascii 100),
+    status: (string-ascii 20),
+    timestamp: uint
+  }
+)
+
+(define-map courier-stats
+  { courier-id: principal }
+  {
+    completed-deliveries: uint,
+    cancelled-deliveries: uint,
+    disputed-deliveries: uint,
+    total-earnings: uint
+  }
+)
+
+(define-map package-history
+  { package-id: uint }
+  {
+    status-updates: (list 10 {
+      status: (string-ascii 20),
+      timestamp: uint,
+      updated-by: principal
+    })
+  }
+)
 
 ;; Define data maps
 (define-map packages 
@@ -138,3 +174,123 @@
     ))
   )
 )
+
+;; Cancel a package delivery
+(define-public (cancel-package (package-id uint))
+  (let
+    (
+      (package-data (unwrap! (map-get? packages { package-id: package-id }) err-not-found))
+    )
+    (asserts! (or 
+      (is-eq tx-sender (get sender package-data))
+      (is-eq tx-sender (get recipient package-data))
+    ) err-unauthorized)
+    (asserts! (is-eq (get status package-data) "created") err-invalid-cancellation)
+    (try! (nft-burn? package-nft package-id (get sender package-data)))
+    (ok (map-set packages { package-id: package-id }
+      (merge package-data { 
+        status: "cancelled"
+      })
+    ))
+  )
+)
+
+;; Update package location
+(define-public (update-package-location (package-id uint) (location (string-ascii 50)))
+  (let
+    (
+      (package-data (unwrap! (map-get? packages { package-id: package-id }) err-not-found))
+      (courier (unwrap! (get courier package-data) err-not-found))
+    )
+    (asserts! (is-eq tx-sender courier) err-unauthorized)
+    (asserts! (is-eq (get status package-data) "in-transit") err-invalid-status)
+    (ok (map-set package-history { package-id: package-id }
+      {
+        status-updates: (unwrap-panic (as-max-len? 
+          (append (default-to (list ) (get status-updates (map-get? package-history { package-id: package-id })))
+          {
+            status: "location-updated",
+            timestamp: block-height,
+            updated-by: tx-sender
+          }
+        ) u10))
+      }
+    ))
+  )
+)
+
+;; File a dispute
+(define-public (file-dispute (package-id uint) (reason (string-ascii 100)))
+  (let
+    (
+      (package-data (unwrap! (map-get? packages { package-id: package-id }) err-not-found))
+    )
+    (asserts! (or 
+      (is-eq tx-sender (get sender package-data))
+      (is-eq tx-sender (get recipient package-data))
+    ) err-unauthorized)
+    (asserts! (is-none (map-get? disputes { package-id: package-id })) err-already-exists)
+    (ok (map-set disputes { package-id: package-id }
+      {
+        complainant: tx-sender,
+        reason: reason,
+        status: "open",
+        timestamp: block-height
+      }
+    ))
+  )
+)
+
+;; Get courier statistics
+(define-read-only (get-courier-stats (courier-id principal))
+  (map-get? courier-stats { courier-id: courier-id })
+)
+
+;; Get package history
+(define-read-only (get-package-history (package-id uint))
+  (map-get? package-history { package-id: package-id })
+)
+
+;; Get dispute details
+(define-read-only (get-dispute-details (package-id uint))
+  (map-get? disputes { package-id: package-id })
+)
+
+;; Update courier stats after delivery
+(define-public (update-courier-stats (courier-id principal) (earnings uint))
+  (let
+    (
+      (stats (default-to {
+        completed-deliveries: u0,
+        cancelled-deliveries: u0,
+        disputed-deliveries: u0,
+        total-earnings: u0
+      } (map-get? courier-stats { courier-id: courier-id })))
+    )
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (ok (map-set courier-stats { courier-id: courier-id }
+      (merge stats {
+        completed-deliveries: (+ (get completed-deliveries stats) u1),
+        total-earnings: (+ (get total-earnings stats) earnings)
+      })
+    ))
+  )
+)
+
+
+;; Resolve dispute
+(define-public (resolve-dispute (package-id uint) (resolution (string-ascii 20)))
+  (let
+    (
+      (dispute-data (unwrap! (map-get? disputes { package-id: package-id }) err-not-found))
+    )
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (ok (map-set disputes { package-id: package-id }
+      (merge dispute-data {
+        status: resolution
+      })
+    ))
+  )
+)
+
+
