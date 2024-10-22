@@ -31,3 +31,25 @@ Clarinet.test({
         assertEquals(block.receipts[0].result.expectOk(), true);
     },
 });
+
+Clarinet.test({
+    name: "Ensure that couriers can register",
+    async fn(chain: Chain, accounts: Map<string, Account>)
+    {
+        const courier = accounts.get("wallet_3")!;
+
+        const block = chain.mineBlock([
+            Tx.contractCall(
+                CONTRACT_NAME,
+                "register-courier",
+                [types.ascii("John Doe")],
+                courier.address
+            )
+        ]);
+
+        assertEquals(block.receipts.length, 1);
+        assertEquals(block.height, 2);
+        assertEquals(block.receipts[0].result.expectOk(), true);
+    },
+});
+
