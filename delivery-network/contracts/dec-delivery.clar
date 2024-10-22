@@ -174,3 +174,24 @@
     ))
   )
 )
+
+;; Cancel a package delivery
+(define-public (cancel-package (package-id uint))
+  (let
+    (
+      (package-data (unwrap! (map-get? packages { package-id: package-id }) err-not-found))
+    )
+    (asserts! (or 
+      (is-eq tx-sender (get sender package-data))
+      (is-eq tx-sender (get recipient package-data))
+    ) err-unauthorized)
+    (asserts! (is-eq (get status package-data) "created") err-invalid-cancellation)
+    (try! (nft-burn? package-nft package-id (get sender package-data)))
+    (ok (map-set packages { package-id: package-id }
+      (merge package-data { 
+        status: "cancelled"
+      })
+    ))
+  )
+)
+
