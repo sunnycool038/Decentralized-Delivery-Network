@@ -6,6 +6,42 @@
 (define-constant err-not-found (err u101))
 (define-constant err-already-exists (err u102))
 (define-constant err-invalid-rating (err u103))
+(define-constant err-invalid-status (err u104))
+(define-constant err-invalid-cancellation (err u105))
+(define-constant err-unauthorized (err u106))
+(define-constant err-invalid-dispute (err u107))
+
+;; Define additional maps
+(define-map disputes
+  { package-id: uint }
+  {
+    complainant: principal,
+    reason: (string-ascii 100),
+    status: (string-ascii 20),
+    timestamp: uint
+  }
+)
+
+(define-map courier-stats
+  { courier-id: principal }
+  {
+    completed-deliveries: uint,
+    cancelled-deliveries: uint,
+    disputed-deliveries: uint,
+    total-earnings: uint
+  }
+)
+
+(define-map package-history
+  { package-id: uint }
+  {
+    status-updates: (list 10 {
+      status: (string-ascii 20),
+      timestamp: uint,
+      updated-by: principal
+    })
+  }
+)
 
 ;; Define data maps
 (define-map packages 
