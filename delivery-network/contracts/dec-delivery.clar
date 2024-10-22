@@ -218,3 +218,25 @@
     ))
   )
 )
+
+;; File a dispute
+(define-public (file-dispute (package-id uint) (reason (string-ascii 100)))
+  (let
+    (
+      (package-data (unwrap! (map-get? packages { package-id: package-id }) err-not-found))
+    )
+    (asserts! (or 
+      (is-eq tx-sender (get sender package-data))
+      (is-eq tx-sender (get recipient package-data))
+    ) err-unauthorized)
+    (asserts! (is-none (map-get? disputes { package-id: package-id })) err-already-exists)
+    (ok (map-set disputes { package-id: package-id }
+      {
+        complainant: tx-sender,
+        reason: reason,
+        status: "open",
+        timestamp: block-height
+      }
+    ))
+  )
+)
