@@ -240,3 +240,18 @@
     ))
   )
 )
+
+;; Get courier statistics
+(define-read-only (get-courier-stats (courier-id principal))
+  (map-get? courier-stats { courier-id: courier-id })
+)
+
+;; Get package history
+(define-read-only (get-package-history (package-id uint))
+  (map-get? package-history { package-id: package-id })
+)
+
+;; Get dispute details
+(define-read-only (get-dispute-details (package-id uint))
+  (map-get? disputes { package-id: package-id })
+)
