@@ -151,3 +151,35 @@ Clarinet.test({
         assertEquals(block.receipts[0].result.expectOk(), true);
     },
 });
+
+Clarinet.test({
+    name: "Ensure that users can rate couriers",
+    async fn(chain: Chain, accounts: Map<string, Account>)
+    {
+        const courier = accounts.get("wallet_3")!;
+        const user = accounts.get("wallet_1")!;
+
+        let block = chain.mineBlock([
+            Tx.contractCall(
+                CONTRACT_NAME,
+                "register-courier",
+                [types.ascii("John Doe")],
+                courier.address
+            )
+        ]);
+
+        block = chain.mineBlock([
+            Tx.contractCall(
+                CONTRACT_NAME,
+                "rate-courier",
+                [
+                    types.principal(courier.address),
+                    types.uint(5)
+                ],
+                user.address
+            )
+        ]);
+
+        assertEquals(block.receipts[0].result.expectOk(), true);
+    },
+});
