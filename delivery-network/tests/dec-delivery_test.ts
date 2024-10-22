@@ -53,3 +53,46 @@ Clarinet.test({
     },
 });
 
+Clarinet.test({
+    name: "Ensure that registered couriers can accept packages",
+    async fn(chain: Chain, accounts: Map<string, Account>)
+    {
+        const sender = accounts.get("wallet_1")!;
+        const recipient = accounts.get("wallet_2")!;
+        const courier = accounts.get("wallet_3")!;
+
+        let block = chain.mineBlock([
+            Tx.contractCall(
+                CONTRACT_NAME,
+                "register-courier",
+                [types.ascii("John Doe")],
+                courier.address
+            ),
+            Tx.contractCall(
+                CONTRACT_NAME,
+                "create-package",
+                [
+                    types.uint(1),
+                    types.principal(recipient.address),
+                    types.uint(1000),
+                    types.ascii("123 Pickup St"),
+                    types.ascii("456 Delivery Ave")
+                ],
+                sender.address
+            )
+        ]);
+
+        block = chain.mineBlock([
+            Tx.contractCall(
+                CONTRACT_NAME,
+                "accept-package",
+                [types.uint(1)],
+                courier.address
+            )
+        ]);
+
+        assertEquals(block.receipts.length, 1);
+        assertEquals(block.receipts[0].result.expectOk(), true);
+    },
+});
+
