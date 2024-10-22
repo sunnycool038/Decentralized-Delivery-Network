@@ -395,3 +395,35 @@ Clarinet.test({
         assertEquals(block.receipts[0].result.expectErr(), types.uint(101)); // err-not-found
     },
 });
+
+Clarinet.test({
+    name: "Ensure that invalid ratings are rejected",
+    async fn(chain: Chain, accounts: Map<string, Account>)
+    {
+        const courier = accounts.get("wallet_3")!;
+        const user = accounts.get("wallet_1")!;
+
+        let block = chain.mineBlock([
+            Tx.contractCall(
+                CONTRACT_NAME,
+                "register-courier",
+                [types.ascii("John Doe")],
+                courier.address
+            )
+        ]);
+
+        block = chain.mineBlock([
+            Tx.contractCall(
+                CONTRACT_NAME,
+                "rate-courier",
+                [
+                    types.principal(courier.address),
+                    types.uint(6) // Invalid rating > 5
+                ],
+                user.address
+            )
+        ]);
+
+        assertEquals(block.receipts[0].result.expectErr(), types.uint(103)); // err-invalid-rating
+    },
+});
