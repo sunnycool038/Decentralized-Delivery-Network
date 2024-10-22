@@ -195,3 +195,26 @@
   )
 )
 
+;; Update package location
+(define-public (update-package-location (package-id uint) (location (string-ascii 50)))
+  (let
+    (
+      (package-data (unwrap! (map-get? packages { package-id: package-id }) err-not-found))
+      (courier (unwrap! (get courier package-data) err-not-found))
+    )
+    (asserts! (is-eq tx-sender courier) err-unauthorized)
+    (asserts! (is-eq (get status package-data) "in-transit") err-invalid-status)
+    (ok (map-set package-history { package-id: package-id }
+      {
+        status-updates: (unwrap-panic (as-max-len? 
+          (append (default-to (list ) (get status-updates (map-get? package-history { package-id: package-id })))
+          {
+            status: "location-updated",
+            timestamp: block-height,
+            updated-by: tx-sender
+          }
+        ) u10))
+      }
+    ))
+  )
+)
